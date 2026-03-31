@@ -20,15 +20,25 @@ typedef enum {
 } ActivationFunction;
 
 
+typedef struct {
+    u32 rows;
+    u32 cols;
+    f64* data;
+} Matrix;
+
+#define GET_MATRIX_ELEMENT(matrix, row, col) ((matrix)->data[(row) * (matrix)->cols + (col)])
+#define SET_MATRIX_ELEMENT(matrix, row, col, val) ((matrix)->data[(row) * (matrix)->cols + (col)] = (val))
+
+
 f64* initializeNeurons(u32 size);
-f64** initializeWeights(u32 currLayer, u32 nextLayer);
+Matrix* initializeWeights(u32 currLayer, u32 nextLayer);
 f64* initializeBias(u32 size);
 function getFunction(ActivationFunction functionName);
 function getFunctionDerivate(ActivationFunction functionName);
 
 typedef struct {
     f64* neurons;
-    f64** weights;
+    Matrix* weights;
     f64* bias;
     function actFunction;
     function derActFunction;
@@ -36,14 +46,14 @@ typedef struct {
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 
-void freeNetwork(Layer* network, u32* sizes, u32 numLayers);
+void freeNetwork(Layer* network, u32 numLayers);
 
 int main() {
     u32 sizes[NUM_LAYERS] = LAYERS_SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
     
-    freeNetwork(model, sizes, NUM_LAYERS);
+    freeNetwork(model, NUM_LAYERS);
     
     return 0;
 }
@@ -56,12 +66,14 @@ f64* initializeNeurons(u32 size) {
 
 // Inizialize all the weight of a single layer to another to random values between -1 and 1
 // currLayer and nectLayer are the number of neurons in the layers
-f64** initializeWeights(u32 currLayer, u32 nextLayer) {
-    f64** weights = (f64**)malloc(currLayer * sizeof(f64*));
+Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
+    Matrix* weights = (Matrix*)malloc(sizeof(Matrix));
+    weights->rows = currLayer;
+    weights->cols = nextLayer;
+    weights->data = (f64*)malloc(currLayer * nextLayer * sizeof(f64));
     for (u32 i = 0; i < currLayer; i++) {
-        weights[i] = (f64*)malloc(nextLayer * sizeof(f64));
         for (u32 j = 0; j < nextLayer; j++) {
-            weights[i][j] = ((f64)rand() / RAND_MAX) * 2 - 1;
+            SET_MATRIX_ELEMENT(weights, i, j, ((f64)rand() / RAND_MAX) * 2 - 1);
         }
     }
     return weights;
@@ -118,7 +130,7 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
     return network;
 }
 
-void freeNetwork(Layer* network, u32* sizes, u32 numLayers) {
+void freeNetwork(Layer* network, u32 numLayers) {
     for (u32 i = 0; i < numLayers; i++) {
         free(network[i].neurons);
         
@@ -127,9 +139,7 @@ void freeNetwork(Layer* network, u32* sizes, u32 numLayers) {
         }
         
         if (network[i].weights != NULL) {
-            for (u32 j = 0; j < sizes[i]; j++) {
-                free(network[i].weights[j]);
-            }
+            free(network[i].weights->data);
             free(network[i].weights);
         }
     }
