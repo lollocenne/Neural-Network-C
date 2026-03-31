@@ -108,6 +108,7 @@ function getFunctionDerivate(ActivationFunction functionName) {
     }
 }
 
+// Initialize the entire neural network given an array of size for each layer, the number of layers and an array of activation function for each layer
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName) {
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
     
