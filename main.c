@@ -82,7 +82,6 @@ function getFunction(ActivationFunction functionName) {
         case RELU:        return relu;       break;
         default:          return NULL;       break;
     }
-    return NULL;
 }
 
 // Return an activation function derivative pointer based on the enum value
@@ -95,7 +94,6 @@ function getFunctionDerivate(ActivationFunction functionName) {
         case RELU:        return derivativeRelu;       break;
         default:          return NULL;                 break;
     }
-    return NULL;
 }
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName) {
