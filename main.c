@@ -132,7 +132,9 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 
 void freeNetwork(Layer* network, u32 numLayers) {
     for (u32 i = 0; i < numLayers; i++) {
-        free(network[i].neurons);
+        if (network[i].bias != NULL) {
+            free(network[i].neurons);
+        }
         
         if (network[i].bias != NULL) {
             free(network[i].bias);
