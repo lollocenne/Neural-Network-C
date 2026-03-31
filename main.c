@@ -4,7 +4,7 @@
 #include "activation_functions.h"
 
 #define NUM_LAYERS 4
-#define SIZES {2, 3, 2, 2}
+#define LAYERS_SIZES {2, 3, 2, 2}
 #define FUNCTIONS {NONE, RELU, SIGMOID, SIGMOID}
 
 
@@ -39,7 +39,7 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 void freeNetwork(Layer* network, u32* sizes, u32 numLayers);
 
 int main() {
-    u32 sizes[NUM_LAYERS] = SIZES;
+    u32 sizes[NUM_LAYERS] = LAYERS_SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
     
