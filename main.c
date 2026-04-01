@@ -6,6 +6,7 @@
 #define NUM_LAYERS 4
 #define LAYERS_SIZES {2, 3, 2, 2}
 #define FUNCTIONS {NONE, RELU, SIGMOID, SIGMOID}
+#define INPUTS {0.5, 0.7}
 
 
 typedef f64 (*function)(f64);
@@ -46,12 +47,21 @@ typedef struct {
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 
+void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
+
+void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
 
 int main() {
     u32 sizes[NUM_LAYERS] = LAYERS_SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
+    f64 inputs[2] = INPUTS;
+    
+    printNeuralNetwork(model, NUM_LAYERS, sizes);
+    feedForward(model, NUM_LAYERS, sizes, inputs);
+    printf("\n-------------------------------------\n");
+    printNeuralNetwork(model, NUM_LAYERS, sizes);
     
     freeNetwork(model, NUM_LAYERS);
     
@@ -66,14 +76,14 @@ f64* initializeNeurons(u32 size) {
 
 // Initialize all the weight of a single layer to another to random values between -1 and 1
 // currLayer and nextLayer are the number of neurons in the layers
-// The weights are stored in a matrix and for each index i,j the weight is the one between the i-th neuron of the current layer and the j-th neuron of the next layer
+// The weights are stored in a matrix and for each index i,j the weight is the one between the i-th neuron of the next layer and the j-th neuron of the current layer
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
     Matrix* weights = (Matrix*)malloc(sizeof(Matrix));
-    weights->rows = currLayer;
-    weights->cols = nextLayer;
+    weights->rows = nextLayer;
+    weights->cols = currLayer;
     weights->data = (f64*)malloc(currLayer * nextLayer * sizeof(f64));
-    for (u32 i = 0; i < currLayer; i++) {
-        for (u32 j = 0; j < nextLayer; j++) {
+    for (u32 i = 0; i < nextLayer; i++) {
+        for (u32 j = 0; j < currLayer; j++) {
             SET_MATRIX_ELEMENT(weights, i, j, ((f64)rand() / RAND_MAX) * 2 - 1);
         }
     }
@@ -132,9 +142,43 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
     return network;
 }
 
+void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
+    // Set the inputs
+    for (u32 i = 0; i < sizes[0]; i++) {
+        network[0].neurons[i] = input[i];
+    }
+    
+    // Calculate the weights * inputs + bias for each layer
+    for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {        
+        for (u32 i = 0; i < sizes[layerIdx + 1]; i++) {
+            network[layerIdx + 1].neurons[i] = network[layerIdx + 1].bias[i];
+            for (u32 j = 0; j < sizes[layerIdx]; j++) {
+                network[layerIdx + 1].neurons[i] += network[layerIdx].neurons[j] * GET_MATRIX_ELEMENT(network[layerIdx].weights, i, j);
+            }
+        }
+    }
+    
+    // apply the activation function to each neuron
+    for (u32 layerIdx = 1; layerIdx < numLayers; layerIdx++) {
+        for (u32 i = 0; i < sizes[layerIdx]; i++) {
+            network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].neurons[i]);
+        }
+    }
+}
+
+// Print the neurons of each layer of the network
+void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes) {
+    for (u32 layerIdx = 0; layerIdx < numLayers; layerIdx++) {
+        for (u32 i = 0; i < sizes[layerIdx]; i++) {
+            printf("%f ", network[layerIdx].neurons[i]);
+        }
+        printf("\n");
+    }
+}
+
 void freeNetwork(Layer* network, u32 numLayers) {
     for (u32 i = 0; i < numLayers; i++) {
-        if (network[i].bias != NULL) {
+        if (network[i].neurons != NULL) {
             free(network[i].neurons);
         }
         
