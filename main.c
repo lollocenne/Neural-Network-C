@@ -11,7 +11,7 @@
 
 
 typedef f64 (*Actfunction)(f64);
-typedef f64 (*Costfunction)(f64, f64);
+typedef f64 (*Cstfunction)(f64, f64);
 
 typedef enum {
     NONE = -1,
@@ -37,19 +37,18 @@ typedef struct {
 #define SET_MATRIX_ELEMENT(matrix, row, col, val) ((matrix)->data[(row) * (matrix)->cols + (col)] = (val))
 
 
-f64* initializeNeurons(u32 size);
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer);
-f64* initializeBias(u32 size);
 Actfunction getFunction(ActivationFunction functionName);
 Actfunction getFunctionDerivate(ActivationFunction functionName);
-Actfunction getCostFunctionDerivate(LossFunction functionName);
-Actfunction getCostFunctionDerivate(LossFunction functionName);
+Cstfunction getCostFunction(LossFunction functionName);
+Cstfunction getCostFunctionDerivate(LossFunction functionName);
 
 typedef struct {
     f64* neurons;
     f64* zs; // the value before applying the activation function
     Matrix* weights;
     f64* bias;
+    f64* signalError; // the error signal for each neuron
     Actfunction actFunction;
     Actfunction derActFunction;
 } Layer;
@@ -75,17 +74,11 @@ int main() {
     feedForward(model, NUM_LAYERS, sizes, inputs);
     printf("\n-------------------------------------\n");
     printNeuralNetwork(model, NUM_LAYERS, sizes);
-    
     freeNetwork(model, NUM_LAYERS);
     
     return 0;
 }
 
-
-// Initialize all neurons of a single layer to 0
-f64* initializeNeurons(u32 size) {
-    return (f64*)calloc(size, sizeof(f64)); //TODO: use malloc, no need to be 0
-}
 
 // Initialize all the weight of a single layer to another to random values between -1 and 1
 // currLayer and nextLayer are the number of neurons in the layers
@@ -101,11 +94,6 @@ Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
         }
     }
     return weights;
-}
-
-// Initialize all bias of a single layer to 0
-f64* initializeBias(u32 size) {
-    return (f64*)calloc(size, sizeof(f64));
 }
 
 // Return an activation function pointer based on the enum value
@@ -132,17 +120,17 @@ Actfunction getFunctionDerivate(ActivationFunction functionName) {
     }
 }
 
-Actfunction getCostFunctionDerivate(LossFunction functionName) {
+Cstfunction getCostFunction(LossFunction functionName) {
     switch (functionName){
-        case SQUARED_ERROR:    return squaredError;         break;
-        default:               return NULL;                 break;
+        case SQUARED_ERROR:    return squaredError; break;
+        default:               return NULL;         break;
     }
 }
 
-Actfunction getCostFunctionDerivate(LossFunction functionName) {
+Cstfunction getCostFunctionDerivate(LossFunction functionName) {
     switch (functionName){
-        case SQUARED_ERROR:    return squaredErrorDerivate;         break;
-        default:               return NULL;                         break;
+        case SQUARED_ERROR:    return squaredErrorDerivate; break;
+        default:               return NULL;                 break;
     }
 }
 
@@ -151,23 +139,26 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
     
     for (u32 i = 0; i < numLayers; i++) {
-        network[i].neurons = initializeNeurons(sizes[i]);
+        network[i].neurons = (f64*)calloc(sizes[i], sizeof(f64)); //TODO: use malloc, no need to be 0
+        network[i].zs = i > 0 ? (f64*)malloc(sizes[i] * sizeof(f64)) : NULL; // No zs for the input layer
         if (i < numLayers - 1) {
             network[i].weights = initializeWeights(sizes[i], sizes[i + 1]);
         } else {
             network[i].weights = NULL; // No weights for the output layer
         }
         if (i > 0) {
-            network[i].bias = initializeBias(sizes[i]);
+            network[i].bias = (f64*)calloc(sizes[i], sizeof(f64));;
         } else {
             network[i].bias = NULL; // No bias for the input layer
         }
+        network[i].signalError = i > 0 ? (f64*)malloc(sizes[i] * sizeof(f64)) : NULL; // No signal error for the input layer
         network[i].actFunction = getFunction(functionsName[i]);
         network[i].derActFunction = getFunctionDerivate(functionsName[i]);
     }
     
     return network;
 }
+
 
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // Set the inputs
@@ -178,9 +169,9 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // Calculate the weights * inputs + bias for each layer
     for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {        
         for (u32 i = 0; i < sizes[layerIdx + 1]; i++) {
-            network[layerIdx + 1].neurons[i] = network[layerIdx + 1].bias[i];
+            network[layerIdx + 1].zs[i] = network[layerIdx + 1].bias[i];
             for (u32 j = 0; j < sizes[layerIdx]; j++) {
-                network[layerIdx + 1].neurons[i] += network[layerIdx].neurons[j] * GET_MATRIX_ELEMENT(network[layerIdx].weights, i, j);
+                network[layerIdx + 1].zs[i] += network[layerIdx].neurons[j] * GET_MATRIX_ELEMENT(network[layerIdx].weights, i, j);
             }
         }
     }
@@ -188,14 +179,35 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // apply the activation function to each neuron
     for (u32 layerIdx = 1; layerIdx < numLayers; layerIdx++) {
         for (u32 i = 0; i < sizes[layerIdx]; i++) {
-            network[layerIdx].zs[i] = network[layerIdx].neurons[i];
-            network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].neurons[i]);
+            network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].zs[i]);
         }
     }
 }
 
 void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
+    // Update the weights and bias of the output layer
+    for (u32 i = 0; i < sizes[numLayer - 1]; i++) {
+        network[numLayer - 1].signalError[i] = getCostFunctionDerivate(costFunction)(expectedOutput[i], network[numLayer - 1].neurons[i]) * network[numLayer - 1].derActFunction(network[numLayer - 1].zs[i]);
+        for (u32 j = 0; j < sizes[numLayer - 2]; j++) {
+            GET_MATRIX_ELEMENT(network[numLayer - 2].weights, i, j) -= learningRate * network[numLayer - 1].signalError[i] * network[numLayer - 2].neurons[j];
+        }
+        network[numLayer - 1].bias[i] -= learningRate * network[numLayer - 1].signalError[i];
+    }
     
+    // Update the weights and bias of all the the layer
+    for (u32 layerIdx = numLayer - 2; layerIdx > 0; layerIdx--) {
+        for (u32 i = 0; i < sizes[layerIdx]; i++) {
+            network[layerIdx].signalError[i] = 0;
+            for (u32 j = 0; j < sizes[layerIdx + 1]; j++) {
+                network[layerIdx].signalError[i] += GET_MATRIX_ELEMENT(network[layerIdx].weights, j, i) * network[layerIdx + 1].signalError[j];
+            }
+            network[layerIdx].signalError[i] *= network[layerIdx].derActFunction(network[layerIdx].zs[i]);
+            for (u32 j = 0; j < sizes[layerIdx - 1]; j++) {
+                GET_MATRIX_ELEMENT(network[layerIdx - 1].weights, i, j) -= learningRate * network[layerIdx].signalError[i] * network[layerIdx - 1].neurons[j];
+            }
+            network[layerIdx].bias[i] -= learningRate * network[layerIdx].signalError[i];
+        }
+    }
 }
 
 // Print the neurons value of each layer of the neural network
@@ -214,8 +226,16 @@ void freeNetwork(Layer* network, u32 numLayers) {
             free(network[i].neurons);
         }
         
+        if (network[i].zs != NULL) {
+            free(network[i].zs);
+        }
+        
         if (network[i].bias != NULL) {
             free(network[i].bias);
+        }
+        
+        if (network[i].signalError != NULL) {
+            free(network[i].signalError);
         }
         
         if (network[i].weights != NULL) {
