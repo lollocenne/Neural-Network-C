@@ -42,6 +42,8 @@ Matrix* initializeWeights(u32 currLayer, u32 nextLayer);
 f64* initializeBias(u32 size);
 Actfunction getFunction(ActivationFunction functionName);
 Actfunction getFunctionDerivate(ActivationFunction functionName);
+Actfunction getCostFunctionDerivate(LossFunction functionName);
+Actfunction getCostFunctionDerivate(LossFunction functionName);
 
 typedef struct {
     f64* neurons;
@@ -56,7 +58,7 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
 
-void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction);
+void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
 
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
@@ -130,6 +132,20 @@ Actfunction getFunctionDerivate(ActivationFunction functionName) {
     }
 }
 
+Actfunction getCostFunctionDerivate(LossFunction functionName) {
+    switch (functionName){
+        case SQUARED_ERROR:    return squaredError;         break;
+        default:               return NULL;                 break;
+    }
+}
+
+Actfunction getCostFunctionDerivate(LossFunction functionName) {
+    switch (functionName){
+        case SQUARED_ERROR:    return squaredErrorDerivate;         break;
+        default:               return NULL;                         break;
+    }
+}
+
 // Initialize the entire neural network given an array of size for each layer, the number of layers and an array of activation function for each layer
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName) {
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
@@ -176,6 +192,10 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
             network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].neurons[i]);
         }
     }
+}
+
+void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
+    
 }
 
 // Print the neurons value of each layer of the neural network
