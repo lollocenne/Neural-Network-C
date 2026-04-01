@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "types.h"
 #include "activation_functions.h"
+#include "cost_functions.h"
 
 #define NUM_LAYERS 4
 #define LAYERS_SIZES {2, 3, 2, 2}
@@ -9,7 +10,8 @@
 #define INPUTS {0.5, 0.7}
 
 
-typedef f64 (*function)(f64);
+typedef f64 (*Actfunction)(f64);
+typedef f64 (*Costfunction)(f64, f64);
 
 typedef enum {
     NONE = -1,
@@ -19,6 +21,10 @@ typedef enum {
     TANH,
     RELU
 } ActivationFunction;
+
+typedef enum {
+    SQUARED_ERROR
+} LossFunction;
 
 
 typedef struct {
@@ -34,23 +40,28 @@ typedef struct {
 f64* initializeNeurons(u32 size);
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer);
 f64* initializeBias(u32 size);
-function getFunction(ActivationFunction functionName);
-function getFunctionDerivate(ActivationFunction functionName);
+Actfunction getFunction(ActivationFunction functionName);
+Actfunction getFunctionDerivate(ActivationFunction functionName);
 
 typedef struct {
     f64* neurons;
+    f64* zs; // the value before applying the activation function
     Matrix* weights;
     f64* bias;
-    function actFunction;
-    function derActFunction;
+    Actfunction actFunction;
+    Actfunction derActFunction;
 } Layer;
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
 
+void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction);
+
+
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
+
 
 int main() {
     u32 sizes[NUM_LAYERS] = LAYERS_SIZES;
@@ -71,7 +82,7 @@ int main() {
 
 // Initialize all neurons of a single layer to 0
 f64* initializeNeurons(u32 size) {
-    return (f64*)calloc(size, sizeof(f64));
+    return (f64*)calloc(size, sizeof(f64)); //TODO: use malloc, no need to be 0
 }
 
 // Initialize all the weight of a single layer to another to random values between -1 and 1
@@ -96,7 +107,7 @@ f64* initializeBias(u32 size) {
 }
 
 // Return an activation function pointer based on the enum value
-function getFunction(ActivationFunction functionName) {
+Actfunction getFunction(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return identity;   break;
         case BINARY_STEP: return binaryStep; break;
@@ -108,7 +119,7 @@ function getFunction(ActivationFunction functionName) {
 }
 
 // Return an activation function derivative pointer based on the enum value
-function getFunctionDerivate(ActivationFunction functionName) {
+Actfunction getFunctionDerivate(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return derivativeIdentity;   break;
         case BINARY_STEP: return derivativeBinaryStep; break;
@@ -161,12 +172,13 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // apply the activation function to each neuron
     for (u32 layerIdx = 1; layerIdx < numLayers; layerIdx++) {
         for (u32 i = 0; i < sizes[layerIdx]; i++) {
+            network[layerIdx].zs[i] = network[layerIdx].neurons[i];
             network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].neurons[i]);
         }
     }
 }
 
-// Print the neurons of each layer of the network
+// Print the neurons value of each layer of the neural network
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes) {
     for (u32 layerIdx = 0; layerIdx < numLayers; layerIdx++) {
         for (u32 i = 0; i < sizes[layerIdx]; i++) {
