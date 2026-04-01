@@ -64,8 +64,9 @@ f64* initializeNeurons(u32 size) {
     return (f64*)calloc(size, sizeof(f64));
 }
 
-// Inizialize all the weight of a single layer to another to random values between -1 and 1
-// currLayer and nectLayer are the number of neurons in the layers
+// Initialize all the weight of a single layer to another to random values between -1 and 1
+// currLayer and nextLayer are the number of neurons in the layers
+// The weights are stored in a matrix and for each index i,j the weight is the one between the i-th neuron of the current layer and the j-th neuron of the next layer
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
     Matrix* weights = (Matrix*)malloc(sizeof(Matrix));
     weights->rows = currLayer;
