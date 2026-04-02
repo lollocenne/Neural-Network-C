@@ -31,7 +31,9 @@ typedef enum {
 } ActivationFunction;
 
 typedef enum {
-    SQUARED_ERROR
+    ABSOLUTE_ERROR,
+    SQUARED_ERROR,
+    LOG_COSH
 } LossFunction;
 
 
@@ -142,15 +144,19 @@ Actfunction getFunctionDerivate(ActivationFunction functionName) {
 
 Cstfunction getCostFunction(LossFunction functionName) {
     switch (functionName){
-        case SQUARED_ERROR:    return squaredError; break;
-        default:               return NULL;         break;
+        case ABSOLUTE_ERROR: return absoluteError; break;
+        case SQUARED_ERROR:  return squaredError;  break;
+        case LOG_COSH:       return logCosh;       break;
+        default:             return NULL;          break;
     }
 }
 
 Cstfunction getCostFunctionDerivate(LossFunction functionName) {
     switch (functionName){
-        case SQUARED_ERROR:    return squaredErrorDerivate; break;
-        default:               return NULL;                 break;
+        case ABSOLUTE_ERROR: return squaredErrorDerivate; break;
+        case SQUARED_ERROR:  return squaredErrorDerivate; break;
+        case LOG_COSH:       return logCoshDerivate;      break;
+        default:             return NULL;                 break;
     }
 }
 
