@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "types.h"
-#include "activation_functions.h"
-#include "cost_functions.h"
+#include "functions/activation_functions.h"
+#include "functions/cost_functions.h"
 
 #define NUM_LAYERS 2
 #define SIZES {1, 1}
