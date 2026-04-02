@@ -4,10 +4,14 @@
 #include "activation_functions.h"
 #include "cost_functions.h"
 
-#define NUM_LAYERS 4
-#define LAYERS_SIZES {2, 3, 2, 2}
-#define FUNCTIONS {NONE, RELU, SIGMOID, SIGMOID}
-#define INPUTS {0.5, 0.7}
+#define NUM_LAYERS 2
+#define SIZES {1, 1}
+#define FUNCTIONS {NONE, IDENTITY}
+
+// Should predict double + 1
+#define TRAIN_SIZE 3
+#define INPUTS {(f64[]){1.0}, (f64[]){4.0}, (f64[]){-3.0}}
+#define EXP_OUTPUT {(f64[]){3.0}, (f64[]){9.0}, (f64[]){-5.0}}
 
 
 typedef f64 (*Actfunction)(f64);
@@ -56,25 +60,25 @@ typedef struct {
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
-
 void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
+void learn(Layer* network, u32 numLayer, u32* sizes, f64* input, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs);
 
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
 
 
-int main() {
-    u32 sizes[NUM_LAYERS] = LAYERS_SIZES;
+int main() {    
+    u32 sizes[NUM_LAYERS] = SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
-    f64 inputs[2] = INPUTS;
-    
-    printNeuralNetwork(model, NUM_LAYERS, sizes);
-    feedForward(model, NUM_LAYERS, sizes, inputs);
-    printf("\n-------------------------------------\n");
-    printNeuralNetwork(model, NUM_LAYERS, sizes);
-    freeNetwork(model, NUM_LAYERS);
+    f64* inputs[] = INPUTS;
+    f64* expectedOutput[] = EXP_OUTPUT;
+    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, TRAIN_SIZE, SQUARED_ERROR, 0.1, 100);
+    feedForward(model, NUM_LAYERS, sizes, inputs[0]);
+    printf("Predicted: %f\nExpected: %f\n", model[1].neurons[0], expectedOutput[0][0]);
+    printf("weight: %f     bias: %f\n", model[0].weights->data[0], model[1].bias[0]);
     
     return 0;
 }
@@ -209,6 +213,22 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
         }
     }
 }
+
+// Train the neural network for a single input and expected output
+void learn(Layer* network, u32 numLayer, u32* sizes, f64* input, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
+    feedForward(network, numLayer, sizes, input);
+    backPropagation(network, numLayer, sizes, expectedOutput, costFunction, learningRate);
+}
+
+// Train the neural network for a certain number of epochs
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs) {
+    for (u32 epoch = 0; epoch < epochs; epoch++) {
+        for (u32 i = 0; i < trainSize; i++) {
+            learn(network, numLayer, sizes, input[i], expectedOutput[i], costFunction, learningRate);
+        }
+    }
+}
+
 
 // Print the neurons value of each layer of the neural network
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes) {
