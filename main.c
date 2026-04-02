@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <time.h>
 #include "types.h"
 #include "functions/activation_functions.h"
 #include "functions/cost_functions.h"
+
 
 #define NUM_LAYERS 2
 #define SIZES {1, 1}
@@ -12,6 +15,10 @@
 #define TRAIN_SIZE 3
 #define INPUTS {(f64[]){1.0}, (f64[]){4.0}, (f64[]){-3.0}}
 #define EXP_OUTPUT {(f64[]){3.0}, (f64[]){9.0}, (f64[]){-5.0}}
+
+
+// Generate a random gaussian number
+#define GAUSSIAN_NUM (sqrt(-2.0 * log((rand() + 1.0) / (RAND_MAX + 1.0))) * cos(2.0 * 3.14 * (rand() + 1.0) / (RAND_MAX + 1.0)))
 
 
 #define LEARNING_RATE 0.1
@@ -79,7 +86,9 @@ void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
 
 
-int main() {    
+int main() {   
+    srand(time(NULL));
+    
     u32 sizes[NUM_LAYERS] = SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
@@ -94,7 +103,7 @@ int main() {
 }
 
 
-// Initialize all the weight of a single layer to another to random values between -1 and 1
+// Initialize all the weight of a single layer to another with He inizialization
 // currLayer and nextLayer are the number of neurons in the layers
 // The weights are stored in a matrix and for each index i,j the weight is the one between the i-th neuron of the next layer and the j-th neuron of the current layer
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
@@ -102,9 +111,10 @@ Matrix* initializeWeights(u32 currLayer, u32 nextLayer) {
     weights->rows = nextLayer;
     weights->cols = currLayer;
     weights->data = (f64*)malloc(currLayer * nextLayer * sizeof(f64));
+    double std = sqrt(2.0 / currLayer);
     for (u32 i = 0; i < nextLayer; i++) {
         for (u32 j = 0; j < currLayer; j++) {
-            SET_MATRIX_ELEMENT(weights, i, j, ((f64)rand() / RAND_MAX) * 2 - 1);
+            SET_MATRIX_ELEMENT(weights, i, j, GAUSSIAN_NUM * std);
         }
     }
     return weights;
