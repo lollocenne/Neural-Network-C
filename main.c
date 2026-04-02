@@ -27,7 +27,8 @@ typedef enum {
     BINARY_STEP,
     SIGMOID,
     TANH,
-    RELU
+    RELU,
+    LEAKY_RELU
 } ActivationFunction;
 
 typedef enum {
@@ -126,6 +127,7 @@ Actfunction getFunction(ActivationFunction functionName) {
         case SIGMOID:     return sigmoid;    break;
         case TANH:        return tanh;       break;
         case RELU:        return relu;       break;
+        case LEAKY_RELU:  return leakyRelu;  break;
         default:          return NULL;       break;
     }
 }
@@ -138,6 +140,7 @@ Actfunction getFunctionDerivate(ActivationFunction functionName) {
         case SIGMOID:     return derivativeSigmoid;    break;
         case TANH:        return derivativeTanh;       break;
         case RELU:        return derivativeRelu;       break;
+        case LEAKY_RELU:  return derivativeLeakyRelu;  break;
         default:          return NULL;                 break;
     }
 }
