@@ -12,7 +12,7 @@
 #define NUM_LAYERS 4
 #define SIZES {784, 128, 64, 10}
 #define FUNCTIONS {NONE, LEAKY_RELU, LEAKY_RELU, SIGMOID}
-#define LOSS_FUNCTION CROSS_ENTROPY
+#define LOSS_FUNCTION SQUARED_ERROR
 
 
 // Generate a random gaussian number
@@ -21,7 +21,7 @@
 
 // Coefficent constants for the learning process
 #define LEARNING_RATE 0.01
-#define MOMENTUM_COEF 0.5
+#define MOMENTUM_COEF 0.9
 
 
 typedef f64 (*Actfunction)(f64);
@@ -89,11 +89,8 @@ void freeNetwork(Layer* network, u32 numLayers);
 u32 **parseCsv(const char *filename, u32 *rowCount);
 u32 createDataset(const char *filename, f64 ***inputs, f64 ***expectedOutput, u32 limit);
 
-#include <float.h>
-int main() {  
-    unsigned int fp_control_state = 0;
-    _controlfp_s(&fp_control_state, 0, _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW);
-    
+
+int main() {    
     srand(time(NULL));
     
     u32 sizes[NUM_LAYERS] = SIZES;
@@ -102,7 +99,7 @@ int main() {
     Layer *model = initializeNetwork(sizes, NUM_LAYERS, functions);
     
     f64 **inputs, **expectedOutput;
-    u32 datasetSize = createDataset("mnist_test.csv", &inputs, &expectedOutput, 1000);
+    u32 datasetSize = createDataset("mnist_test.csv", &inputs, &expectedOutput, 5000);
     
     printf("Training...\n");
     train(model, NUM_LAYERS, sizes, inputs, expectedOutput, datasetSize, LOSS_FUNCTION, LEARNING_RATE, 128);
@@ -114,14 +111,12 @@ int main() {
         feedForward(model, NUM_LAYERS, sizes, inputs[i]);
         
         u32 predicted = 0, expected = 0;
-        for (u32 j = 1; j < 10; j++) {
+        for (u32 j = 0; j < 10; j++) {
             if (model[NUM_LAYERS - 1].neurons[j] > model[NUM_LAYERS - 1].neurons[predicted]) {
                 predicted = j;
             }
-            printf("%f ", model[NUM_LAYERS - 1].neurons[j]);
         }
-        printf("\n");
-        for (u32 j = 1; j < 10; j++) {
+        for (u32 j = 0; j < 10; j++) {
             if (expectedOutput[i][j] > expectedOutput[i][expected]) {
                 expected = j;
             }
@@ -247,20 +242,17 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
         network[0].neurons[i] = input[i];
     }
     
-    // Calculate the weights * inputs + bias for each layer
+    // Calculate the weights * inputs + bias for each layer and apply the activation function
     for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {        
         for (u32 i = 0; i < sizes[layerIdx + 1]; i++) {
+            // Calculate the z
             network[layerIdx + 1].zs[i] = network[layerIdx + 1].bias[i];
             for (u32 j = 0; j < sizes[layerIdx]; j++) {
                 network[layerIdx + 1].zs[i] += network[layerIdx].neurons[j] * GET_MATRIX_ELEMENT(network[layerIdx].weights, i, j);
             }
-        }
-    }
-    
-    // apply the activation function to each neuron
-    for (u32 layerIdx = 1; layerIdx < numLayers; layerIdx++) {
-        for (u32 i = 0; i < sizes[layerIdx]; i++) {
-            network[layerIdx].neurons[i] = network[layerIdx].actFunction(network[layerIdx].zs[i]);
+            
+            // Apply the activation function
+            network[layerIdx + 1].neurons[i] = network[layerIdx + 1].actFunction(network[layerIdx + 1].zs[i]);
         }
     }
 }
@@ -272,10 +264,10 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
         network[numLayer - 1].signalError[i] = getCostFunctionDerivate(costFunction)(expectedOutput[i], network[numLayer - 1].neurons[i]) * network[numLayer - 1].derActFunction(network[numLayer - 1].zs[i]);
         for (u32 j = 0; j < sizes[numLayer - 2]; j++) {
             gradient = network[numLayer - 1].signalError[i] * network[numLayer - 2].neurons[j];
-            GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) + gradient;
+            GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) + (1.0 - MOMENTUM_COEF) * gradient;
             GET_MATRIX_ELEMENT(network[numLayer - 2].weights, i, j) -= learningRate * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j);
         }
-        network[numLayer - 1].momentumB[i] = MOMENTUM_COEF * network[numLayer - 1].momentumB[i] + network[numLayer - 1].signalError[i];
+        network[numLayer - 1].momentumB[i] = MOMENTUM_COEF * network[numLayer - 1].momentumB[i] + (1.0 - MOMENTUM_COEF) * network[numLayer - 1].signalError[i];
         network[numLayer - 1].bias[i] -= learningRate * network[numLayer - 1].momentumB[i];
     }
     
@@ -289,10 +281,10 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
             network[layerIdx].signalError[i] *= network[layerIdx].derActFunction(network[layerIdx].zs[i]);
             for (u32 j = 0; j < sizes[layerIdx - 1]; j++) {
                 gradient = network[layerIdx].signalError[i] * network[layerIdx - 1].neurons[j];
-                GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) + gradient;
+                GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) + (1.0 - MOMENTUM_COEF) * gradient;
                 GET_MATRIX_ELEMENT(network[layerIdx - 1].weights, i, j) -= learningRate * GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j);
             }
-            network[layerIdx].momentumB[i] = MOMENTUM_COEF * network[layerIdx].momentumB[i] + network[layerIdx].signalError[i];
+            network[layerIdx].momentumB[i] = MOMENTUM_COEF * network[layerIdx].momentumB[i] + (1.0 - MOMENTUM_COEF) * network[layerIdx].signalError[i];
             network[layerIdx].bias[i] -= learningRate * network[layerIdx].momentumB[i];
         }
     }
@@ -310,7 +302,7 @@ void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expected
         for (u32 i = 0; i < trainSize; i++) {
             learn(network, numLayer, sizes, input[i], expectedOutput[i], costFunction, learningRate);
         }
-        printf("Epoch: %d/%d\n", epoch + 1, epochs);
+        if (!((epoch + 1) % 10) || epoch == 0 || epoch + 1 == epochs) printf("Epoch: %d/%d\n", epoch + 1, epochs);
     }
 }
 
