@@ -18,7 +18,6 @@
 // Generate a random gaussian number
 #define GAUSSIAN_NUM (sqrt(-2.0 * log((rand() + 1.0) / (RAND_MAX + 1.0))) * cos(2.0 * 3.14 * (rand() + 1.0) / (RAND_MAX + 1.0)))
 
-
 // Coefficent constants for the learning process
 #define LEARNING_RATE 0.01
 #define MOMENTUM_COEF 0.9
@@ -96,19 +95,24 @@ int main() {
     u32 sizes[NUM_LAYERS] = SIZES;
     ActivationFunction functions[NUM_LAYERS] = FUNCTIONS;
     
-    Layer *model = initializeNetwork(sizes, NUM_LAYERS, functions);
+    Layer* model = initializeNetwork(sizes, NUM_LAYERS, functions);
     
-    f64 **inputs, **expectedOutput;
+    f64** inputs;
+    f64** expectedOutput;
     u32 datasetSize = createDataset("mnist_test.csv", &inputs, &expectedOutput, 5000);
+    const u32 trainSize = datasetSize * 0.8;
+    const u32 testSize = datasetSize * 0.2;
     
     printf("Training...\n");
-    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, datasetSize, LOSS_FUNCTION, LEARNING_RATE, 128);
+    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, trainSize, LOSS_FUNCTION, LEARNING_RATE, 128);
     
     // Accuracy test
     printf("Testing...\n");
+    f64** inputsTest = inputs + trainSize;
+    f64** outputsTest = expectedOutput + trainSize;
     u32 correct = 0;
-    for (u32 i = 0; i < datasetSize; i++) {
-        feedForward(model, NUM_LAYERS, sizes, inputs[i]);
+    for (u32 i = 0; i < testSize; i++) {
+        feedForward(model, NUM_LAYERS, sizes, inputsTest[i]);
         
         u32 predicted = 0, expected = 0;
         for (u32 j = 0; j < 10; j++) {
@@ -117,13 +121,13 @@ int main() {
             }
         }
         for (u32 j = 0; j < 10; j++) {
-            if (expectedOutput[i][j] > expectedOutput[i][expected]) {
+            if (outputsTest[i][j] > outputsTest[i][expected]) {
                 expected = j;
             }
         }
         if (predicted == expected) correct++;
     }
-    printf("Accuracy: %.2f%%\n", 100.0 * correct / datasetSize);
+    printf("Accuracy: %.2f%%\n", 100.0 * correct / testSize);
     
     for (u32 i = 0; i < datasetSize; i++) {
         free(inputs[i]);
