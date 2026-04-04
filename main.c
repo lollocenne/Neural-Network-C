@@ -286,7 +286,6 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
             for (u32 j = 0; j < sizes[layerIdx + 1]; j++) {
                 network[layerIdx].signalError[i] += GET_MATRIX_ELEMENT(network[layerIdx].weights, j, i) * network[layerIdx + 1].signalError[j];
             }
-            network[layerIdx].signalError[i] = CLAMP(network[layerIdx].signalError[i], -10, 10);
             network[layerIdx].signalError[i] *= network[layerIdx].derActFunction(network[layerIdx].zs[i]);
             for (u32 j = 0; j < sizes[layerIdx - 1]; j++) {
                 gradient = network[layerIdx].signalError[i] * network[layerIdx - 1].neurons[j];
