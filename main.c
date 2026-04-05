@@ -3,7 +3,8 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "types.h"
+#include "helpers/types.h"
+#include "helpers/mat_calc.h"
 #include "functions/activation_functions.h"
 #include "functions/cost_functions.h"
 
@@ -42,16 +43,6 @@ typedef enum {
     LOG_COSH,
     CROSS_ENTROPY
 } LossFunction;
-
-
-typedef struct {
-    u32 rows;
-    u32 cols;
-    f64* data;
-} Matrix;
-
-#define GET_MATRIX_ELEMENT(matrix, row, col) ((matrix)->data[(row) * (matrix)->cols + (col)])
-#define SET_MATRIX_ELEMENT(matrix, row, col, val) ((matrix)->data[(row) * (matrix)->cols + (col)] = (val))
 
 
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer);

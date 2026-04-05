@@ -1,6 +1,6 @@
 #include <math.h>
 #include "activation_functions.h"
-#include "../types.h"
+#include "../helpers/types.h"
 
 f64 identity(f64 x)             {return x;}
 f64 binaryStep(f64 x)           {return x >= 0 ? 1 : 0;}

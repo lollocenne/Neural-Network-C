@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "cost_functions.h"
-#include "../types.h"
+#include "../helpers/types.h"
 
 #define EPSILON 0.000000000000001
 #define max(a, b) ((a) > (b) ? (a) : (b))

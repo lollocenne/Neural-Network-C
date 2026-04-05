@@ -1,7 +1,7 @@
 #ifndef ACTIVATION_FUNCTIONS_H
 #define ACTIVATION_FUNCTIONS_H
 
-#include "../types.h"
+#include "../helpers/types.h"
 
 f64 identity(f64 x);
 f64 binaryStep(f64 x);
