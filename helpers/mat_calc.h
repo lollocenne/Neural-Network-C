@@ -12,4 +12,8 @@ typedef struct {
 #define GET_MATRIX_ELEMENT(matrix, row, col) ((matrix)->data[(row) * (matrix)->cols + (col)])
 #define SET_MATRIX_ELEMENT(matrix, row, col, val) ((matrix)->data[(row) * (matrix)->cols + (col)] = (val))
 
+void transposeMatrix(Matrix* original, Matrix* resMatrix);
+void sumMatrices(Matrix* mat1, Matrix* mat2, Matrix* resMatrix);
+void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix);
+
 #endif
