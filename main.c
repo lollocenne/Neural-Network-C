@@ -67,6 +67,8 @@ typedef struct {
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 
+void applyActFunction(Layer* layer, u32 size);
+
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
 void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
 void learn(Layer* network, u32 numLayer, u32* sizes, f64* input, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
@@ -251,6 +253,14 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 }
 
 
+// Apply the activaction funztio to a layer.
+void applyActFunction(Layer* layer, u32 size) {
+    for (u32 i = 0; i < size; i++) {
+        layer->neurons->data[i] = layer->actFunction(layer->zs->data[i]);
+    }
+}
+
+
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // Set the inputs
     for (u32 i = 0; i < sizes[0]; i++) {
@@ -258,17 +268,12 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     }
     
     // Calculate the weights * inputs + bias for each layer and apply the activation function
-    for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {        
-        for (u32 i = 0; i < sizes[layerIdx + 1]; i++) {
-            // Calculate the z
-            network[layerIdx + 1].zs->data[i] = network[layerIdx + 1].bias->data[i];
-            for (u32 j = 0; j < sizes[layerIdx]; j++) {
-                network[layerIdx + 1].zs->data[i] += network[layerIdx].neurons->data[j] * GET_MATRIX_ELEMENT(network[layerIdx].weights, i, j);
-            }
-            
-            // Apply the activation function
-            network[layerIdx + 1].neurons->data[i] = network[layerIdx + 1].actFunction(network[layerIdx + 1].zs->data[i]);
-        }
+    for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {
+        // Calculate the z
+        matrixProduct(network[layerIdx].weights, network[layerIdx].neurons, network[layerIdx + 1].zs);
+        sumMatrices(network[layerIdx + 1].zs, network[layerIdx + 1].bias, network[layerIdx + 1].zs);
+        // Apply the activation function
+        applyActFunction(&network[layerIdx + 1], sizes[layerIdx + 1]);
     }
 }
 
