@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "mat_calc.h"
 #include "types.h"
 
