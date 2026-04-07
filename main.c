@@ -24,9 +24,6 @@
 #define MOMENTUM_COEF 0.9
 
 
-typedef f64 (*Actfunction)(f64);
-typedef f64 (*Cstfunction)(f64, f64);
-
 typedef enum {
     NONE = -1,
     IDENTITY,
@@ -51,10 +48,10 @@ Matrix* initializeVector(u32 size, u32 zeroOut);
 void freeMatrix(Matrix* m);
 
 
-Actfunction getFunction(ActivationFunction functionName);
-Actfunction getFunctionDerivate(ActivationFunction functionName);
-Cstfunction getCostFunction(LossFunction functionName);
-Cstfunction getCostFunctionDerivate(LossFunction functionName);
+funcOneParam getFunction(ActivationFunction functionName);
+funcOneParam getFunctionDerivate(ActivationFunction functionName);
+funcTwoParam getCostFunction(LossFunction functionName);
+funcTwoParam getCostFunctionDerivate(LossFunction functionName);
 
 typedef struct {
     Matrix* neurons;
@@ -64,8 +61,8 @@ typedef struct {
     Matrix* momentumW;
     Matrix* momentumB;
     Matrix* signalError; // the error signal for each neuron
-    Actfunction actFunction;
-    Actfunction derActFunction;
+    funcOneParam actFunction;
+    funcOneParam derActFunction;
 } Layer;
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
@@ -176,7 +173,7 @@ Matrix* initializeVector(u32 size, u32 zeroOut) {
 
 
 // Return an activation function pointer based on the enum value
-Actfunction getFunction(ActivationFunction functionName) {
+funcOneParam getFunction(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return identity;   break;
         case BINARY_STEP: return binaryStep; break;
@@ -189,7 +186,7 @@ Actfunction getFunction(ActivationFunction functionName) {
 }
 
 // Return an activation function derivative pointer based on the enum value
-Actfunction getFunctionDerivate(ActivationFunction functionName) {
+funcOneParam getFunctionDerivate(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return derivativeIdentity;   break;
         case BINARY_STEP: return derivativeBinaryStep; break;
@@ -201,7 +198,7 @@ Actfunction getFunctionDerivate(ActivationFunction functionName) {
     }
 }
 
-Cstfunction getCostFunction(LossFunction functionName) {
+funcTwoParam getCostFunction(LossFunction functionName) {
     switch (functionName){
         case ABSOLUTE_ERROR: return absoluteError; break;
         case SQUARED_ERROR:  return squaredError;  break;
@@ -211,7 +208,7 @@ Cstfunction getCostFunction(LossFunction functionName) {
     }
 }
 
-Cstfunction getCostFunctionDerivate(LossFunction functionName) {
+funcTwoParam getCostFunctionDerivate(LossFunction functionName) {
     switch (functionName){
         case ABSOLUTE_ERROR: return absoluteErrorDerivate;   break;
         case SQUARED_ERROR:  return squaredErrorDerivate;    break;
