@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "mat_calc.h"
@@ -31,22 +32,27 @@ void transposeMatrix(Matrix* original, Matrix* resMatrix) {
 
 // Sums 2 matrices and the result will be stored in resMatrix
 void sumMatrices(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
-    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols) return;
+    if (mat1->rows != mat2->rows || mat1->cols != mat2->cols) {
+        printf("ERROR: Different matrices sizes");
+        exit(EXIT_FAILURE);
+    }
     
-    f64* mat1Data = mat1->data;
-    f64* mat2Data = mat2->data;
-    f64* resData = resMatrix->data;
-    u32 mat1Cols = mat1->cols;
-    for (u32 i = 0; i < mat1->rows; i++) {
-        for (u32 j = 0; j < mat1->cols; j++) {
-            SET_ARRAY_ELEMENT(resData, mat1Cols, i, j, GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, j) + GET_ARRAY_ELEMENT(mat2Data, mat1Cols, i, j));
-        }
+    u32 size = mat1->rows * mat1->cols;
+    f64* a = mat1->data;
+    f64* b = mat2->data;
+    f64* r = resMatrix->data;
+    for (u32 i = 0; i < size; i++) {
+        r[i] = a[i] + b[i];
     }
 }
 
 // Multiply 2 matrices and the result will be stored in resMatrix
 void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
-    if (mat1->cols != mat2->rows) return;
+    if (mat1->cols != mat2->rows) {
+        printf("ERROR: Cols are not equal to rows");
+        exit(EXIT_FAILURE);
+    }
+    
     resMatrix->rows = mat1->rows;
     resMatrix->cols = mat2->cols;
     if (resMatrix->data != NULL) {
@@ -61,10 +67,12 @@ void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
     u32 mat1Rows = mat1->rows;
     u32 mat1Cols = mat1->cols;
     u32 mat2Cols = mat2->cols;
+    f64 tempMat;
     for (u32 i = 0; i < mat1Rows; i++) {
-        for (u32 j = 0; j < mat2Cols; j++) {
-            for (u32 k = 0; k < mat1Cols; k++) {
-                GET_ARRAY_ELEMENT(resData, mat2Cols, i, j) += GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k) * GET_ARRAY_ELEMENT(mat2Data, mat2Cols, k, j);
+        for (u32 k = 0; k < mat1Cols; k++) {
+            tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
+            for (u32 j = 0; j < mat2Cols; j++) {
+                GET_ARRAY_ELEMENT(resData, mat2Cols, i, j) += tempMat * GET_ARRAY_ELEMENT(mat2Data, mat2Cols, k, j);
             }
         }
     }
@@ -72,9 +80,9 @@ void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
 
 // Multiply a matrix with a number and the result will be stored in resMatrix
 void multiplyMatrix(Matrix* mat, f64 num, Matrix* resMatrix) {
-    for (u32 i = 0; i < mat->rows; i++) {
-        for (u32 j = 0; j < mat->cols; j++) {
-            SET_MATRIX_ELEMENT(resMatrix, i, j, GET_MATRIX_ELEMENT(mat, i, j) * num);
-        }
+    f64* matData = mat->data;
+    f64* resData = resMatrix->data;
+    for (u32 i = 0; i < mat->rows * mat->cols; i++) {
+        resData[i] = matData[i] * num;
     }
 }
