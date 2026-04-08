@@ -69,3 +69,12 @@ void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
         }
     }
 }
+
+// Multiply a matrix with a number and the result will be stored in resMatrix
+void multiplyMatrix(Matrix* mat, f64 num, Matrix* resMatrix) {
+    for (u32 i = 0; i < mat->rows; i++) {
+        for (u32 j = 0; j < mat->cols; j++) {
+            SET_MATRIX_ELEMENT(resMatrix, i, j, GET_MATRIX_ELEMENT(mat, i, j) * num);
+        }
+    }
+}
