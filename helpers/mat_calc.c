@@ -94,7 +94,7 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
         printf("ERROR: Cols are not equal to rows");
         exit(EXIT_FAILURE);
     }
-
+    
     resMatrix->rows = mat1->rows;
     resMatrix->cols = mat2->cols;
     
@@ -106,7 +106,7 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
         resMatrix->data = (f64*)malloc(totalSize * sizeof(f64));
         memcpy(resMatrix->data, bias->data, totalSize * sizeof(f64));
     }
-
+    
     f64* mat1Data = mat1->data;
     f64* mat2Data = mat2->data;
     f64* resData  = resMatrix->data;
