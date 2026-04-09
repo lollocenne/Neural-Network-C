@@ -270,8 +270,7 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     // Calculate the weights * inputs + bias for each layer and apply the activation function
     for (u32 layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {
         // Calculate the z
-        matrixProduct(network[layerIdx].weights, network[layerIdx].neurons, network[layerIdx + 1].zs);
-        sumMatrices(network[layerIdx + 1].zs, network[layerIdx + 1].bias, network[layerIdx + 1].zs);
+        matrixProductWithBias(network[layerIdx].weights, network[layerIdx].neurons, network[layerIdx + 1].bias, network[layerIdx + 1].zs);
         // Apply the activation function
         applyActFunction(&network[layerIdx + 1], sizes[layerIdx + 1]);
     }
