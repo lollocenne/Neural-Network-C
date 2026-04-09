@@ -86,3 +86,40 @@ void multiplyMatrix(Matrix* mat, f64 num, Matrix* resMatrix) {
         resData[i] = matData[i] * num;
     }
 }
+
+// Multiply 2 matrices and sum bias, result stored in resMatrix
+// Equivalent to: matrixProduct(mat1, mat2, res) + sumMatrices(res, bias, res) but in a single loop, avoiding a second pass over the data
+void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* resMatrix) {
+    if (mat1->cols != mat2->rows) {
+        printf("ERROR: Cols are not equal to rows");
+        exit(EXIT_FAILURE);
+    }
+
+    resMatrix->rows = mat1->rows;
+    resMatrix->cols = mat2->cols;
+    
+    u32 totalSize = resMatrix->rows * resMatrix->cols;
+    
+    if (resMatrix->data != NULL) {
+        memcpy(resMatrix->data, bias->data, totalSize * sizeof(f64));
+    } else {
+        resMatrix->data = (f64*)malloc(totalSize * sizeof(f64));
+        memcpy(resMatrix->data, bias->data, totalSize * sizeof(f64));
+    }
+
+    f64* mat1Data = mat1->data;
+    f64* mat2Data = mat2->data;
+    f64* resData  = resMatrix->data;
+    u32 mat1Rows = mat1->rows;
+    u32 mat1Cols = mat1->cols;
+    u32 mat2Cols = mat2->cols;
+    f64 tempMat;
+    for (u32 i = 0; i < mat1Rows; i++) {
+        for (u32 k = 0; k < mat1Cols; k++) {
+            tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
+            for (u32 j = 0; j < mat2Cols; j++) {
+                GET_ARRAY_ELEMENT(resData, mat2Cols, i, j) += tempMat * GET_ARRAY_ELEMENT(mat2Data, mat2Cols, k, j);
+            }
+        }
+    }
+}
