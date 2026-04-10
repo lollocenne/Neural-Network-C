@@ -113,8 +113,9 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
     u32 mat1Rows = mat1->rows;
     u32 mat1Cols = mat1->cols;
     u32 mat2Cols = mat2->cols;
-    f64 tempMat;
+    #pragma omp parallel for schedule(dynamic, mat1Rows / 6)
     for (u32 i = 0; i < mat1Rows; i++) {
+        f64 tempMat;
         for (u32 k = 0; k < mat1Cols; k++) {
             tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
             for (u32 j = 0; j < mat2Cols; j++) {
