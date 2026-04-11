@@ -18,7 +18,7 @@
 
 Matrix* initializeWeights(u32 currLayer, u32 nextLayer);
 Matrix* initializeMomentumW(u32 currLayer, u32 nextLayer);
-Matrix* initializeVector(u32 size, u32 zeroOut);
+Matrix* initializeVector(u32 size, u32 zeroOut, u32 extendsRows);
 void freeMatrix(Matrix* m);
 
 
@@ -69,10 +69,13 @@ Matrix* initializeMomentumW(u32 currLayer, u32 nextLayer) {
     return weights;
 }
 
-Matrix* initializeVector(u32 size, u32 zeroOut) {
+// Inizialize a Matrix n*1 or 1*n
+// Set zeroOut to 1 to iniztialize to zero
+// Set extendsRows to 1 to create a n*1 matrix, set it to 0 to create a 1*n matrix
+Matrix* initializeVector(u32 size, u32 zeroOut, u32 extendsRows) {
     Matrix* vec = (Matrix*)malloc(sizeof(Matrix));
-    vec->rows = size;
-    vec->cols = 1;
+    vec->rows = extendsRows ? size : 1;
+    vec->cols = extendsRows ? 1 : size;
     if (zeroOut) {
         vec->data = (f64*)calloc(size, sizeof(f64));
     } else {
@@ -133,8 +136,8 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
     
     for (u32 i = 0; i < numLayers; i++) {
-        network[i].neurons = initializeVector(sizes[i], 0);
-        network[i].zs = i > 0 ? initializeVector(sizes[i], 0) : NULL; // No zs for the input layer
+        network[i].neurons = initializeVector(sizes[i], 0, 1);
+        network[i].zs = i > 0 ? initializeVector(sizes[i], 0, 1) : NULL; // No zs for the input layer
         
         if (i < numLayers - 1) {
             network[i].weights = initializeWeights(sizes[i], sizes[i + 1]);
@@ -145,14 +148,14 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
         } // No weights nor momentum for the output layer
         
         if (i > 0) {
-            network[i].bias = initializeVector(sizes[i], 1);
-            network[i].momentumB = initializeVector(sizes[i], 1);
+            network[i].bias = initializeVector(sizes[i], 1, 1);
+            network[i].momentumB = initializeVector(sizes[i], 1, 1);
         } else {
             network[i].bias = NULL; 
             network[i].momentumB = NULL;
         } // No bias nor momentum for the input layer
         
-        network[i].signalError = i > 0 ? initializeVector(sizes[i], 0) : NULL; // No signal error for the input layer
+        network[i].signalError = i > 0 ? initializeVector(sizes[i], 0, 1) : NULL; // No signal error for the input layer
         network[i].actFunction = getFunction(functionsName[i]);
         network[i].derActFunction = getFunctionDerivate(functionsName[i]);
     }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cblas.h>
 #include "mat_calc.h"
 #include "types.h"
 
@@ -97,32 +98,26 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
         exit(EXIT_FAILURE);
     }
     
-    resMatrix->rows = mat1->rows;
-    resMatrix->cols = mat2->cols;
-    
-    u32 totalSize = resMatrix->rows * resMatrix->cols;
-    
     if (resMatrix->data != NULL) {
-        memcpy(resMatrix->data, bias->data, totalSize * sizeof(f64));
+        memcpy(resMatrix->data, bias->data, resMatrix->rows * resMatrix->cols * sizeof(f64));
     } else {
-        resMatrix->data = (f64*)malloc(totalSize * sizeof(f64));
-        memcpy(resMatrix->data, bias->data, totalSize * sizeof(f64));
+        resMatrix->rows = bias->rows;
+        resMatrix->cols = bias->cols;
+        resMatrix->data = (f64*)malloc(resMatrix->rows * resMatrix->cols * sizeof(f64));
+        memcpy(resMatrix->data, bias->data, resMatrix->rows * resMatrix->cols * sizeof(f64));
     }
     
-    f64* mat1Data = mat1->data;
-    f64* mat2Data = mat2->data;
-    f64* resData  = resMatrix->data;
-    u32 mat1Rows = mat1->rows;
-    u32 mat1Cols = mat1->cols;
-    u32 mat2Cols = mat2->cols;
-    #pragma omp parallel for schedule(static)
-    for (u32 i = 0; i < mat1Rows; i++) {
-        f64 tempMat;
-        for (u32 k = 0; k < mat1Cols; k++) {
-            tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
-            for (u32 j = 0; j < mat2Cols; j++) {
-                GET_ARRAY_ELEMENT(resData, mat2Cols, i, j) += tempMat * GET_ARRAY_ELEMENT(mat2Data, mat2Cols, k, j);
-            }
-        }
-    }
+    cblas_dgemv(
+        CblasRowMajor, CblasNoTrans,
+        mat1->rows,
+        mat1->cols,
+        1.0,
+        mat1->data,
+        mat2->rows * mat2->cols,
+        mat2->data,
+        1,
+        1.0,
+        resMatrix->data,
+        1
+    );
 }

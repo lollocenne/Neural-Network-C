@@ -7,8 +7,6 @@
 #include "../functions/cost_functions.h"
 #include "../neural_network.h"
 
-#include <time.h>
-
 
 // Example and test constant
 #define NUM_LAYERS 4
@@ -80,7 +78,7 @@ int main() {
     
     
     // Testing Time
-    printf("%f", ((double) (clock() - start)) / CLOCKS_PER_SEC);
+    printf("Seconds: %f\n", ((double) (clock() - start)) / CLOCKS_PER_SEC);
     
     return 0;
 }
