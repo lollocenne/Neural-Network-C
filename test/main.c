@@ -82,7 +82,7 @@ int main() {
     
     return 0;
 }
-
+ 
 
 // Load the data from mnist csv file
 #define COLS 785 // 1 label + 784 pixels
