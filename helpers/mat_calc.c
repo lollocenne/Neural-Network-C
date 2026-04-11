@@ -41,6 +41,7 @@ void sumMatrices(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
     f64* a = mat1->data;
     f64* b = mat2->data;
     f64* r = resMatrix->data;
+    #pragma omp parallel for schedule(static)
     for (u32 i = 0; i < size; i++) {
         r[i] = a[i] + b[i];
     }
@@ -68,6 +69,7 @@ void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
     u32 mat1Cols = mat1->cols;
     u32 mat2Cols = mat2->cols;
     f64 tempMat;
+    #pragma omp parallel for schedule(static)
     for (u32 i = 0; i < mat1Rows; i++) {
         for (u32 k = 0; k < mat1Cols; k++) {
             tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
@@ -113,7 +115,7 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
     u32 mat1Rows = mat1->rows;
     u32 mat1Cols = mat1->cols;
     u32 mat2Cols = mat2->cols;
-    #pragma omp parallel for schedule(dynamic, mat1Rows / 6)
+    #pragma omp parallel for schedule(static)
     for (u32 i = 0; i < mat1Rows; i++) {
         f64 tempMat;
         for (u32 k = 0; k < mat1Cols; k++) {
