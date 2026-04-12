@@ -188,10 +188,11 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
 }
 
 void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
+    funcTwoParam cFunc = getCostFunctionDerivate(costFunction); // cost function
     f64 gradient;
     // Update the weights and bias of the output layer
     for (u32 i = 0; i < sizes[numLayer - 1]; i++) {
-        network[numLayer - 1].signalError->data[i] = getCostFunctionDerivate(costFunction)(expectedOutput[i], network[numLayer - 1].neurons->data[i]) * network[numLayer - 1].derActFunction(network[numLayer - 1].zs->data[i]);
+        network[numLayer - 1].signalError->data[i] = cFunc(expectedOutput[i], network[numLayer - 1].neurons->data[i]) * network[numLayer - 1].derActFunction(network[numLayer - 1].zs->data[i]);
         for (u32 j = 0; j < sizes[numLayer - 2]; j++) {
             gradient = network[numLayer - 1].signalError->data[i] * network[numLayer - 2].neurons->data[j];
             GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) + (1.0 - MOMENTUM_COEF) * gradient;
