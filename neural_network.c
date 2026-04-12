@@ -166,8 +166,11 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 
 // Apply the activaction funztio to a layer.
 void applyActFunction(Layer* layer, u32 size) {
+    funcOneParam layerActFunction = layer->actFunction;
+    f64* restrict neuronsData = layer->neurons->data;
+    f64* restrict zsData = layer->zs->data;
     for (u32 i = 0; i < size; i++) {
-        layer->neurons->data[i] = layer->actFunction(layer->zs->data[i]);
+        neuronsData[i] = layerActFunction(zsData[i]);
     }
 }
 
