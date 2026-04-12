@@ -15,20 +15,20 @@
 
 
 // Get the transpose of a matrix and the result will be stored in resMatrix
-void transposeMatrix(Matrix* original, Matrix* resMatrix) {
+void transposeMatrix(Matrix* original, Matrix* resMatrix) {    
     if (resMatrix->data == NULL) resMatrix->data = (f64*)malloc(original->rows * original->cols * sizeof(f64));
     resMatrix->rows = original->cols;
     resMatrix->cols = original->rows;
     
-    f64* originalData = original->data;
-    f64* resData = resMatrix->data;
-    u32 originalRows = original->rows;
-    u32 originalCols = original->cols;
-    for (u32 i = 0; i < originalRows; i++) {
-        for (u32 j = 0; j < originalCols; j++) {
-            SET_ARRAY_ELEMENT(resData, originalRows, j, i, GET_ARRAY_ELEMENT(originalData, originalCols, i, j));
-        }
-    }
+    cblas_domatcopy(
+        CblasRowMajor, CblasTrans, 
+        original->rows, original->cols, 
+        1.0,
+        original->data,
+        original->cols, 
+        resMatrix->data,
+        resMatrix->cols
+    );
 }
 
 // Sums 2 matrices and the result will be stored in resMatrix
@@ -39,13 +39,8 @@ void sumMatrices(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
     }
     
     u32 size = mat1->rows * mat1->cols;
-    f64* a = mat1->data;
-    f64* b = mat2->data;
-    f64* r = resMatrix->data;
-    #pragma omp parallel for schedule(static)
-    for (u32 i = 0; i < size; i++) {
-        r[i] = a[i] + b[i];
-    }
+    cblas_dcopy(size, mat2->data, 1, resMatrix->data, 1);
+    cblas_daxpy(size, 1.0, mat1->data, 1, resMatrix->data, 1);
 }
 
 // Multiply 2 matrices and the result will be stored in resMatrix
@@ -57,28 +52,20 @@ void matrixProduct(Matrix* mat1, Matrix* mat2, Matrix* resMatrix) {
     
     resMatrix->rows = mat1->rows;
     resMatrix->cols = mat2->cols;
-    if (resMatrix->data != NULL) {
-        memset(resMatrix->data, 0, resMatrix->rows * resMatrix->cols * sizeof(f64));
-    } else {
-        resMatrix->data = (f64*)calloc(resMatrix->rows * resMatrix->cols, sizeof(f64));
-    }
+    if (resMatrix->data == NULL) resMatrix->data = (f64*)malloc(resMatrix->rows * resMatrix->cols * sizeof(f64));
     
-    f64* mat1Data = mat1->data;
-    f64* mat2Data = mat2->data;
-    f64* resData = resMatrix->data;
-    u32 mat1Rows = mat1->rows;
-    u32 mat1Cols = mat1->cols;
-    u32 mat2Cols = mat2->cols;
-    f64 tempMat;
-    #pragma omp parallel for schedule(static)
-    for (u32 i = 0; i < mat1Rows; i++) {
-        for (u32 k = 0; k < mat1Cols; k++) {
-            tempMat = GET_ARRAY_ELEMENT(mat1Data, mat1Cols, i, k);
-            for (u32 j = 0; j < mat2Cols; j++) {
-                GET_ARRAY_ELEMENT(resData, mat2Cols, i, j) += tempMat * GET_ARRAY_ELEMENT(mat2Data, mat2Cols, k, j);
-            }
-        }
-    }
+    cblas_dgemm(
+        CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+        mat1->rows, mat2->cols, mat1->cols, 
+        1.0,
+        mat1->data,
+        mat1->cols, 
+        mat2->data,
+        mat2->cols, 
+        0.0,
+        resMatrix->data,
+        resMatrix->cols
+    );
 }
 
 // Multiply a matrix with a number and the result will be stored in resMatrix
@@ -109,8 +96,7 @@ void matrixProductWithBias(Matrix* mat1, Matrix* mat2, Matrix* bias, Matrix* res
     
     cblas_dgemv(
         CblasRowMajor, CblasNoTrans,
-        mat1->rows,
-        mat1->cols,
+        mat1->rows, mat1->cols,
         1.0,
         mat1->data,
         mat2->rows * mat2->cols,
