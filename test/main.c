@@ -43,7 +43,7 @@ int main() {
     const u32 testSize = datasetSize * 0.2;
     
     printf("Training...\n");
-    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, trainSize, LOSS_FUNCTION, LEARNING_RATE, 32);
+    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, trainSize, LOSS_FUNCTION, LEARNING_RATE, 40, 16);
     
     // Accuracy test
     printf("Testing...\n");
