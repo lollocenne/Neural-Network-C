@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "helpers/types.h"
 #include "helpers/mat_calc.h"
 #include "functions/activation_functions.h"
@@ -34,9 +35,8 @@ void applyActFunction(Layer* layer, u32 size);
 
 
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
-void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
-void learn(Layer* network, u32 numLayer, u32* sizes, f64* input, f64* expectedOutput, LossFunction costFunction, f64 learningRate);
-void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs);
+void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc);
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize);
 
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
@@ -190,54 +190,80 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
     }
 }
 
-void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
-    funcTwoParam cFunc = getCostFunctionDerivate(costFunction); // cost function
-    f64 gradient;
-    // Update the weights and bias of the output layer
-    for (u32 i = 0; i < sizes[numLayer - 1]; i++) {
-        network[numLayer - 1].signalError->data[i] = cFunc(expectedOutput[i], network[numLayer - 1].neurons->data[i]) * network[numLayer - 1].derActFunction(network[numLayer - 1].zs->data[i]);
-        for (u32 j = 0; j < sizes[numLayer - 2]; j++) {
-            gradient = network[numLayer - 1].signalError->data[i] * network[numLayer - 2].neurons->data[j];
-            GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j) + (1.0 - MOMENTUM_COEF) * gradient;
-            GET_MATRIX_ELEMENT(network[numLayer - 2].weights, i, j) -= learningRate * GET_MATRIX_ELEMENT(network[numLayer - 2].momentumW, i, j);
-        }
-        network[numLayer - 1].momentumB->data[i] = MOMENTUM_COEF * network[numLayer - 1].momentumB->data[i] + (1.0 - MOMENTUM_COEF) * network[numLayer - 1].signalError->data[i];
-        network[numLayer - 1].bias->data[i] -= learningRate * network[numLayer - 1].momentumB->data[i];
+void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc) {
+    funcTwoParam cFunc = getCostFunctionDerivate(costFunction);
+    u32 outLayer = numLayer - 1;
+    for (u32 i = 0; i < sizes[outLayer]; i++) {
+        network[outLayer].signalError->data[i] = cFunc(expectedOutput[i], network[outLayer].neurons->data[i]) * network[outLayer].derActFunction(network[outLayer].zs->data[i]);
     }
     
-    // Update the weights and bias of all the the layer
-    for (u32 layerIdx = numLayer - 2; layerIdx > 0; layerIdx--) {
+    for (u32 layerIdx = outLayer; layerIdx > 0; layerIdx--) {
+        if (layerIdx < outLayer) {
+            for (u32 i = 0; i < sizes[layerIdx]; i++) {
+                f64 errorSum = 0;
+                for (u32 j = 0; j < sizes[layerIdx + 1]; j++) {
+                    errorSum += GET_MATRIX_ELEMENT(network[layerIdx].weights, j, i) * network[layerIdx + 1].signalError->data[j];
+                }
+                network[layerIdx].signalError->data[i] = errorSum * network[layerIdx].derActFunction(network[layerIdx].zs->data[i]);
+            }
+        }
         for (u32 i = 0; i < sizes[layerIdx]; i++) {
-            network[layerIdx].signalError->data[i] = 0;
-            for (u32 j = 0; j < sizes[layerIdx + 1]; j++) {
-                network[layerIdx].signalError->data[i] += GET_MATRIX_ELEMENT(network[layerIdx].weights, j, i) * network[layerIdx + 1].signalError->data[j];
-            }
-            network[layerIdx].signalError->data[i] *= network[layerIdx].derActFunction(network[layerIdx].zs->data[i]);
+            gradBAcc[layerIdx - 1][i] += network[layerIdx].signalError->data[i];
             for (u32 j = 0; j < sizes[layerIdx - 1]; j++) {
-                gradient = network[layerIdx].signalError->data[i] * network[layerIdx - 1].neurons->data[j];
-                GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j) + (1.0 - MOMENTUM_COEF) * gradient;
-                GET_MATRIX_ELEMENT(network[layerIdx - 1].weights, i, j) -= learningRate * GET_MATRIX_ELEMENT(network[layerIdx - 1].momentumW, i, j);
+                gradWAcc[layerIdx - 1][i * sizes[layerIdx - 1] + j] += network[layerIdx].signalError->data[i] * network[layerIdx - 1].neurons->data[j];
             }
-            network[layerIdx].momentumB->data[i] = MOMENTUM_COEF * network[layerIdx].momentumB->data[i] + (1.0 - MOMENTUM_COEF) * network[layerIdx].signalError->data[i];
-            network[layerIdx].bias->data[i] -= learningRate * network[layerIdx].momentumB->data[i];
         }
     }
 }
 
-// Train the neural network for a single input and expected output
-void learn(Layer* network, u32 numLayer, u32* sizes, f64* input, f64* expectedOutput, LossFunction costFunction, f64 learningRate) {
-    feedForward(network, numLayer, sizes, input);
-    backPropagation(network, numLayer, sizes, expectedOutput, costFunction, learningRate);
-}
-
+#define myMin(a, b) ((a) < (b) ? (a) : (b))
 // Train the neural network for a certain number of epochs
-void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs) {
-    for (u32 epoch = 0; epoch < epochs; epoch++) {
-        for (u32 i = 0; i < trainSize; i++) {
-            learn(network, numLayer, sizes, input[i], expectedOutput[i], costFunction, learningRate);
-        }
-        if (!((epoch + 1) % 10) || epoch == 0 || epoch + 1 == epochs) printf("Epoch: %d/%d\n", epoch + 1, epochs);
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize) {
+    f64** gradWAcc = (f64**)malloc((numLayer - 1) * sizeof(f64*));
+    f64** gradBAcc = (f64**)malloc((numLayer - 1) * sizeof(f64*));
+    for (u32 l = 0; l < numLayer - 1; l++) {
+        gradWAcc[l] = (f64*)malloc(sizes[l + 1] * sizes[l] * sizeof(f64));
+        gradBAcc[l] = (f64*)malloc(sizes[l + 1] * sizeof(f64));
     }
+    
+    f64 avgGradB, avgGradW;
+    for (u32 epoch = 0; epoch < epochs; epoch++) {
+        for (u32 i = 0; i < trainSize; i += batchSize) {
+            u32 currentBatchSize = myMin(trainSize - i, batchSize);
+            for (u32 l = 0; l < numLayer - 1; l++) {
+                memset(gradWAcc[l], 0, sizes[l + 1] * sizes[l] * sizeof(f64));
+                memset(gradBAcc[l], 0, sizes[l + 1] * sizeof(f64));
+            }
+            for (u32 j = 0; j < currentBatchSize; j++) {
+                feedForward(network, numLayer, sizes, input[i + j]);
+                backPropagation(network, numLayer, sizes, expectedOutput[i + j], costFunction, gradWAcc, gradBAcc);
+            }
+            for (u32 l = 0; l < numLayer - 1; l++) {
+                u32 nextLayer = l + 1;
+                for (u32 r = 0; r < sizes[nextLayer]; r++) {
+                    avgGradB = gradBAcc[l][r] / (f64)currentBatchSize;
+                    network[nextLayer].momentumB->data[r] = MOMENTUM_COEF * network[nextLayer].momentumB->data[r] + (1.0 - MOMENTUM_COEF) * avgGradB;
+                    network[nextLayer].bias->data[r] -= learningRate * network[nextLayer].momentumB->data[r];
+                    for (u32 c = 0; c < sizes[l]; c++) {
+                        avgGradW = gradWAcc[l][r * sizes[l] + c] / (f64)currentBatchSize;
+                        GET_MATRIX_ELEMENT(network[l].momentumW, r, c) = MOMENTUM_COEF * GET_MATRIX_ELEMENT(network[l].momentumW, r, c) + (1.0 - MOMENTUM_COEF) * avgGradW;
+                        GET_MATRIX_ELEMENT(network[l].weights, r, c) -= learningRate * GET_MATRIX_ELEMENT(network[l].momentumW, r, c);
+                    }
+                }
+            }
+        }
+        
+        if (!((epoch + 1) % 10) || epoch == 0 || epoch + 1 == epochs) {
+            printf("Epoch: %d/%d\n", epoch + 1, epochs);
+        }
+    }
+    
+    for (u32 l = 0; l < numLayer - 1; l++) {
+        free(gradWAcc[l]);
+        free(gradBAcc[l]);
+    }
+    free(gradWAcc);
+    free(gradBAcc);
 }
 
 

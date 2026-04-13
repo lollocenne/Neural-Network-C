@@ -40,7 +40,7 @@ typedef struct {
 
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
-void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs);
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize);
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
