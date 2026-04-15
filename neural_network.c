@@ -260,6 +260,7 @@ void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expected
         
         if (!((epoch + 1) % 10) || epoch == 0 || epoch + 1 == epochs) {
             printf("Epoch: %d/%d\n", epoch + 1, epochs);
+            //learningRate *= 0.95;     // May help
         }
     }
     

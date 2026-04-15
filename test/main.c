@@ -16,7 +16,7 @@
 
 
 // Coefficent constants for the learning process
-#define LEARNING_RATE 0.01
+#define LEARNING_RATE 0.1
 
 
 u32 **parseCsv(const char *filename, u32 *rowCount);
