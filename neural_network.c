@@ -197,14 +197,19 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
         network[outLayer].signalError->data[i] = cFunc(expectedOutput[i], network[outLayer].neurons->data[i]) * network[outLayer].derActFunction(network[outLayer].zs->data[i]);
     }
     
+    funcOneParam aFunc; // Activation function derivative
+    f64 *signalError, *zs;
     for (u32 layerIdx = outLayer; layerIdx > 0; layerIdx--) {
         if (layerIdx < outLayer) {
+            aFunc = network[layerIdx].derActFunction;
+            signalError = network[layerIdx].signalError->data;
+            zs = network[layerIdx].zs->data;
             for (u32 i = 0; i < sizes[layerIdx]; i++) {
                 f64 errorSum = 0;
                 for (u32 j = 0; j < sizes[layerIdx + 1]; j++) {
                     errorSum += GET_MATRIX_ELEMENT(network[layerIdx].weights, j, i) * network[layerIdx + 1].signalError->data[j];
                 }
-                network[layerIdx].signalError->data[i] = errorSum * network[layerIdx].derActFunction(network[layerIdx].zs->data[i]);
+                signalError[i] = errorSum * aFunc(zs[i]);
             }
         }
         for (u32 i = 0; i < sizes[layerIdx]; i++) {
