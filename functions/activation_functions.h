@@ -12,6 +12,7 @@ f64 leakyRelu(f64 x);
 f64 softPlus(f64 x);
 f64 gaussian(f64 x);
 f64 sinusoid(f64 x);
+void softmax(Layer* l, u32 size);
 
 f64 derivativeIdentity(f64 x);
 f64 derivativeBinaryStep(f64 x);
