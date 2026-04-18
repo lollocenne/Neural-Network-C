@@ -31,19 +31,6 @@ typedef enum {
 } LossFunction;
 
 
-typedef struct {
-    Matrix* neurons;
-    Matrix* zs; // the value before applying the activation function
-    Matrix* weights;
-    Matrix* bias;
-    Matrix* momentumW;
-    Matrix* momentumB;
-    Matrix* signalError; // the error signal for each neuron
-    funcOneParam actFunction;
-    funcOneParam derActFunction;
-} Layer;
-
-
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
 void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
 void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize);
