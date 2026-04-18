@@ -6,7 +6,6 @@
 #include "helpers/mat_calc.h"
 #include "functions/activation_functions.h"
 #include "functions/cost_functions.h"
-
 #include "neural_network.h"
 
 
@@ -86,8 +85,9 @@ Matrix* initializeVector(u32 size, u32 zeroOut, u32 extendsRows) {
 
 
 // Return an activation function pointer based on the enum value
+// ! DOES NOT INCLUDE SOFTMAX !
 funcOneParam getActFunction(ActivationFunction functionName) {
-    switch (functionName){
+    switch (functionName) {
         case IDENTITY:    return identity;   break;
         case BINARY_STEP: return binaryStep; break;
         case SIGMOID:     return sigmoid;    break;
@@ -102,8 +102,9 @@ funcOneParam getActFunction(ActivationFunction functionName) {
 }
 
 // Return an activation function derivative pointer based on the enum value
+// ! DOES NOT INCLUDE SOFTMAX !
 funcOneParam getActFunctionDerivate(ActivationFunction functionName) {
-    switch (functionName){
+    switch (functionName) {
         case IDENTITY:    return derivativeIdentity;   break;
         case BINARY_STEP: return derivativeBinaryStep; break;
         case SIGMOID:     return derivativeSigmoid;    break;
@@ -118,7 +119,7 @@ funcOneParam getActFunctionDerivate(ActivationFunction functionName) {
 }
 
 funcTwoParam getCostFunction(LossFunction functionName) {
-    switch (functionName){
+    switch (functionName) {
         case ABSOLUTE_ERROR: return absoluteError; break;
         case SQUARED_ERROR:  return squaredError;  break;
         case LOG_COSH:       return logCosh;       break;
@@ -132,15 +133,15 @@ funcTwoParam getCostFunctionDerivate(LossFunction functionName) {
         case ABSOLUTE_ERROR: return absoluteErrorDerivate;   break;
         case SQUARED_ERROR:  return squaredErrorDerivate;    break;
         case LOG_COSH:       return logCoshDerivate;         break;
-        case CROSS_ENTROPY:  return crossEntropyDerivate;  break;
+        case CROSS_ENTROPY:  return crossEntropyDerivate;    break;
         default:             return NULL;                    break;
     }
 }
 
 // Initialize the entire neural network given an array of size for each layer, the number of layers and an array of activation function for each layer
 Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* actFunctionsName) {
+    // ! USE SOFTMAX ONLY WITH CROSS ENTROPY !
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
-    
     for (u32 i = 0; i < numLayers; i++) {
         network[i].neurons = initializeVector(sizes[i], 0, 1);
         network[i].zs = i > 0 ? initializeVector(sizes[i], 0, 1) : NULL; // No zs for the input layer
@@ -148,33 +149,36 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* actFunct
         if (i < numLayers - 1) {
             network[i].weights = initializeWeights(sizes[i], sizes[i + 1]);
             network[i].momentumW = initializeMomentumW(sizes[i], sizes[i + 1]);
-        } else {
+        } else { // No weights nor momentum for the output layer
             network[i].weights = NULL; 
             network[i].momentumW = NULL;
-        } // No weights nor momentum for the output layer
+        }
         
         if (i > 0) {
             network[i].bias = initializeVector(sizes[i], 1, 1);
             network[i].momentumB = initializeVector(sizes[i], 1, 1);
-        } else {
+        } else { // No bias nor momentum for the input layer
             network[i].bias = NULL; 
             network[i].momentumB = NULL;
-        } // No bias nor momentum for the input layer
+        }
         
         network[i].signalError = i > 0 ? initializeVector(sizes[i], 0, 1) : NULL; // No signal error for the input layer
     }
-    
     return network;
 }
 
 
 // Apply the activaction funztio to a layer.
 void applyActFunction(Layer* layer, u32 size, ActivationFunction actFunctionName) {
-    funcOneParam layerActFunction = getActFunction(actFunctionName);
-    f64* restrict neuronsData = layer->neurons->data;
-    f64* restrict zsData = layer->zs->data;
-    for (u32 i = 0; i < size; i++) {
-        neuronsData[i] = layerActFunction(zsData[i]);
+    if (actFunctionName == SOFTMAX) {
+        softmax(layer, size);
+    } else {
+        funcOneParam layerActFunction = getActFunction(actFunctionName);
+        f64* restrict neuronsData = layer->neurons->data;
+        f64* restrict zsData = layer->zs->data;
+        for (u32 i = 0; i < size; i++) {
+            neuronsData[i] = layerActFunction(zsData[i]);
+        }
     }
 }
 
@@ -196,11 +200,10 @@ void feedForward(Layer* network, u32 numLayers, ActivationFunction* actFunctions
 
 void backPropagation(Layer* network, u32 numLayer, ActivationFunction* actFunctionsName, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc) {
     u32 outLayer = numLayer - 1;
-    int x = 0; 
     
     funcOneParam aFunc;  // Activation function derivative
     f64* signalError, *zs;
-    if (x == 1) {
+    if (actFunctionsName[outLayer] == SOFTMAX) {
         // For softmax
         for (u32 i = 0; i < sizes[outLayer]; i++) {
             network[outLayer].signalError->data[i] = network[outLayer].neurons->data[i] - expectedOutput[i];

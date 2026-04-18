@@ -20,7 +20,8 @@ typedef enum {
     LEAKY_RELU,
     SOFT_PLUS,
     GAUSSIAN,
-    SINUSOID
+    SINUSOID,
+    SOFTMAX
 } ActivationFunction;
 
 typedef enum {
