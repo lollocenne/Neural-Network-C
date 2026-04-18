@@ -94,6 +94,9 @@ funcOneParam getFunction(ActivationFunction functionName) {
         case TANH:        return tanh;       break;
         case RELU:        return relu;       break;
         case LEAKY_RELU:  return leakyRelu;  break;
+        case SOFT_PLUS:   return softPlus;   break;
+        case GAUSSIAN:    return gaussian;   break;
+        case SINUSOID:    return sinusoid;   break;
         default:          return NULL;       break;
     }
 }
@@ -107,6 +110,9 @@ funcOneParam getFunctionDerivate(ActivationFunction functionName) {
         case TANH:        return derivativeTanh;       break;
         case RELU:        return derivativeRelu;       break;
         case LEAKY_RELU:  return derivativeLeakyRelu;  break;
+        case SOFT_PLUS:   return derivativeSoftPlus;   break;
+        case GAUSSIAN:    return derivativeGaussian;   break;
+        case SINUSOID:    return derivativeSinusoid;   break;
         default:          return NULL;                 break;
     }
 }

@@ -1,3 +1,6 @@
+#ifndef NEURAL_NETWORK_H
+#define NEURAL_NETWORK_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -14,7 +17,10 @@ typedef enum {
     SIGMOID,
     TANH,
     RELU,
-    LEAKY_RELU
+    LEAKY_RELU,
+    SOFT_PLUS,
+    GAUSSIAN,
+    SINUSOID
 } ActivationFunction;
 
 typedef enum {
@@ -44,3 +50,5 @@ void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expected
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
 void freeNetwork(Layer* network, u32 numLayers);
+
+#endif
