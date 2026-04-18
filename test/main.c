@@ -12,7 +12,7 @@
 #define NUM_LAYERS 4
 #define SIZES {784, 128, 64, 10}
 #define FUNCTIONS {NONE, LEAKY_RELU, LEAKY_RELU, SIGMOID}
-#define LOSS_FUNCTION SQUARED_ERROR
+#define LOSS_FUNCTION CROSS_ENTROPY
 
 
 // Coefficent constants for the learning process
