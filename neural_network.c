@@ -23,20 +23,20 @@ Matrix* initializeVector(u32 size, u32 zeroOut, u32 extendsRows);
 void freeMatrix(Matrix* m);
 
 
-funcOneParam getFunction(ActivationFunction functionName);
-funcOneParam getFunctionDerivate(ActivationFunction functionName);
+funcOneParam getActFunction(ActivationFunction functionName);
+funcOneParam getActFunctionDerivate(ActivationFunction functionName);
 funcTwoParam getCostFunction(LossFunction functionName);
 funcTwoParam getCostFunctionDerivate(LossFunction functionName);
 
 
-Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName);
+Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* actFunctionsName);
 
-void applyActFunction(Layer* layer, u32 size);
+void applyActFunction(Layer* layer, u32 size, ActivationFunction actFunctionName);
 
 
-void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input);
-void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc);
-void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize);
+void feedForward(Layer* network, u32 numLayers, ActivationFunction* actFunctionsName, u32* sizes, f64* input);
+void backPropagation(Layer* network, u32 numLayer, ActivationFunction* actFunctionsName, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc);
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, ActivationFunction* actFunctionsName, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize);
 
 
 void printNeuralNetwork(Layer* network, u32 numLayers, u32* sizes);
@@ -86,7 +86,7 @@ Matrix* initializeVector(u32 size, u32 zeroOut, u32 extendsRows) {
 
 
 // Return an activation function pointer based on the enum value
-funcOneParam getFunction(ActivationFunction functionName) {
+funcOneParam getActFunction(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return identity;   break;
         case BINARY_STEP: return binaryStep; break;
@@ -102,7 +102,7 @@ funcOneParam getFunction(ActivationFunction functionName) {
 }
 
 // Return an activation function derivative pointer based on the enum value
-funcOneParam getFunctionDerivate(ActivationFunction functionName) {
+funcOneParam getActFunctionDerivate(ActivationFunction functionName) {
     switch (functionName){
         case IDENTITY:    return derivativeIdentity;   break;
         case BINARY_STEP: return derivativeBinaryStep; break;
@@ -138,7 +138,7 @@ funcTwoParam getCostFunctionDerivate(LossFunction functionName) {
 }
 
 // Initialize the entire neural network given an array of size for each layer, the number of layers and an array of activation function for each layer
-Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* functionsName) {
+Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* actFunctionsName) {
     Layer* network = (Layer*)malloc(numLayers * sizeof(Layer));
     
     for (u32 i = 0; i < numLayers; i++) {
@@ -162,8 +162,6 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
         } // No bias nor momentum for the input layer
         
         network[i].signalError = i > 0 ? initializeVector(sizes[i], 0, 1) : NULL; // No signal error for the input layer
-        network[i].actFunction = getFunction(functionsName[i]);
-        network[i].derActFunction = getFunctionDerivate(functionsName[i]);
     }
     
     return network;
@@ -171,8 +169,8 @@ Layer* initializeNetwork(u32* sizes, u32 numLayers, ActivationFunction* function
 
 
 // Apply the activaction funztio to a layer.
-void applyActFunction(Layer* layer, u32 size) {
-    funcOneParam layerActFunction = layer->actFunction;
+void applyActFunction(Layer* layer, u32 size, ActivationFunction actFunctionName) {
+    funcOneParam layerActFunction = getActFunction(actFunctionName);
     f64* restrict neuronsData = layer->neurons->data;
     f64* restrict zsData = layer->zs->data;
     for (u32 i = 0; i < size; i++) {
@@ -181,7 +179,7 @@ void applyActFunction(Layer* layer, u32 size) {
 }
 
 
-void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
+void feedForward(Layer* network, u32 numLayers, ActivationFunction* actFunctionsName, u32* sizes, f64* input) {
     // Set the inputs
     for (u32 i = 0; i < sizes[0]; i++) {
         network[0].neurons->data[i] = input[i];
@@ -192,22 +190,35 @@ void feedForward(Layer* network, u32 numLayers, u32* sizes, f64* input) {
         // Calculate the z
         matrixProductWithBias(network[layerIdx].weights, network[layerIdx].neurons, network[layerIdx + 1].bias, network[layerIdx + 1].zs);
         // Apply the activation function
-        applyActFunction(&network[layerIdx + 1], sizes[layerIdx + 1]);
+        applyActFunction(&network[layerIdx + 1], sizes[layerIdx + 1], actFunctionsName[layerIdx + 1]);
     }
 }
 
-void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc) {
-    funcTwoParam cFunc = getCostFunctionDerivate(costFunction);
+void backPropagation(Layer* network, u32 numLayer, ActivationFunction* actFunctionsName, u32* sizes, f64* expectedOutput, LossFunction costFunction, f64** gradWAcc, f64** gradBAcc) {
     u32 outLayer = numLayer - 1;
-    for (u32 i = 0; i < sizes[outLayer]; i++) {
-        network[outLayer].signalError->data[i] = cFunc(expectedOutput[i], network[outLayer].neurons->data[i]) * network[outLayer].derActFunction(network[outLayer].zs->data[i]);
+    int x = 0; 
+    
+    funcOneParam aFunc;  // Activation function derivative
+    f64* signalError, *zs;
+    if (x == 1) {
+        // For softmax
+        for (u32 i = 0; i < sizes[outLayer]; i++) {
+            network[outLayer].signalError->data[i] = network[outLayer].neurons->data[i] - expectedOutput[i];
+        }
+    } else {
+        funcTwoParam cFunc = getCostFunctionDerivate(costFunction);
+        aFunc = getActFunctionDerivate(actFunctionsName[outLayer]);
+        f64* neurons = network[outLayer].neurons->data;
+        signalError = network[outLayer].signalError->data;
+        zs = network[outLayer].zs->data;
+        for (u32 i = 0; i < sizes[outLayer]; i++) {
+            signalError[i] = cFunc(expectedOutput[i], neurons[i]) * aFunc(zs[i]);
+        }
     }
     
-    funcOneParam aFunc; // Activation function derivative
-    f64 *signalError, *zs;
     for (u32 layerIdx = outLayer; layerIdx > 0; layerIdx--) {
         if (layerIdx < outLayer) {
-            aFunc = network[layerIdx].derActFunction;
+            aFunc = getActFunctionDerivate(actFunctionsName[layerIdx]);
             signalError = network[layerIdx].signalError->data;
             zs = network[layerIdx].zs->data;
             for (u32 i = 0; i < sizes[layerIdx]; i++) {
@@ -227,9 +238,9 @@ void backPropagation(Layer* network, u32 numLayer, u32* sizes, f64* expectedOutp
     }
 }
 
-#define myMin(a, b) ((a) < (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 // Train the neural network for a certain number of epochs
-void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize) {
+void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expectedOutput, u32 trainSize, ActivationFunction* actFunctionsName, LossFunction costFunction, f64 learningRate, u32 epochs, u32 batchSize) {
     f64** gradWAcc = (f64**)malloc((numLayer - 1) * sizeof(f64*));
     f64** gradBAcc = (f64**)malloc((numLayer - 1) * sizeof(f64*));
     for (u32 l = 0; l < numLayer - 1; l++) {
@@ -240,14 +251,14 @@ void train(Layer* network, u32 numLayer, u32* sizes, f64** input, f64** expected
     f64 avgGradB, avgGradW;
     for (u32 epoch = 0; epoch < epochs; epoch++) {
         for (u32 i = 0; i < trainSize; i += batchSize) {
-            u32 currentBatchSize = myMin(trainSize - i, batchSize);
+            u32 currentBatchSize = min(trainSize - i, batchSize);
             for (u32 l = 0; l < numLayer - 1; l++) {
                 memset(gradWAcc[l], 0, sizes[l + 1] * sizes[l] * sizeof(f64));
                 memset(gradBAcc[l], 0, sizes[l + 1] * sizeof(f64));
             }
             for (u32 j = 0; j < currentBatchSize; j++) {
-                feedForward(network, numLayer, sizes, input[i + j]);
-                backPropagation(network, numLayer, sizes, expectedOutput[i + j], costFunction, gradWAcc, gradBAcc);
+                feedForward(network, numLayer, actFunctionsName, sizes, input[i + j]);
+                backPropagation(network, numLayer, actFunctionsName, sizes, expectedOutput[i + j], costFunction, gradWAcc, gradBAcc);
             }
             for (u32 l = 0; l < numLayer - 1; l++) {
                 u32 nextLayer = l + 1;

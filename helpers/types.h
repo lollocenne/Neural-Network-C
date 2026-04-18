@@ -28,8 +28,6 @@ typedef struct {
     Matrix* momentumW;
     Matrix* momentumB;
     Matrix* signalError; // the error signal for each neuron
-    funcOneParam actFunction;
-    funcOneParam derActFunction;
 } Layer;
 
 #endif

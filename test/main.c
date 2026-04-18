@@ -43,7 +43,7 @@ int main() {
     const u32 testSize = datasetSize * 0.2;
     
     printf("Training...\n");
-    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, trainSize, LOSS_FUNCTION, LEARNING_RATE, 64, 32);
+    train(model, NUM_LAYERS, sizes, inputs, expectedOutput, trainSize, functions, LOSS_FUNCTION, LEARNING_RATE, 64, 32);
     
     // Accuracy test
     printf("Testing...\n");
@@ -51,7 +51,7 @@ int main() {
     f64** outputsTest = expectedOutput + trainSize;
     u32 correct = 0;
     for (u32 i = 0; i < testSize; i++) {
-        feedForward(model, NUM_LAYERS, sizes, inputsTest[i]);
+        feedForward(model, NUM_LAYERS, functions, sizes, inputsTest[i]);
         
         u32 predicted = 0, expected = 0;
         for (u32 j = 0; j < 10; j++) {
